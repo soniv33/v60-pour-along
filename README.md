@@ -7,7 +7,8 @@ A guided brew timer for James Hoffmann's V60 "better" technique. Step through ea
 ## Features
 
 - **7-step guided recipe** — bloom, swirl, first pour, final pour, swirl, drawdown
-- **Three dose sizes** — 15 g / 250 ml, 22 g / 370 ml, 30 g / 500 ml
+- **Adjustable dose** — quick presets (1 cup, 1½, 2 cups) plus per-gram coffee and water steppers that keep the ratio locked
+- **Grind selector** — Fine / Med-Fine / Medium / Coarse to note your setting before brewing
 - **Per-step countdown** with an animated ring; drawdown counts up so you're not rushed
 - **Tap to pause / resume** on the timer circle
 - **Audio + haptic cues** on each step transition
