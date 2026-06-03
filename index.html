@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>V60 Pour Along</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f0e0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="V60" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0e0d;
+      --surface: #1a1917;
+      --surface2: #242220;
+      --border: #2e2c29;
+      --text: #f0ece6;
+      --text-muted: #7a756e;
+      --text-dim: #4a4540;
+      --pour: #c8965a;
+      --pour-light: #e8b87a;
+      --wait: #6b9e8a;
+      --wait-light: #8bc0aa;
+      --swirl: #8b7fc8;
+      --done: #7ab87a;
+      --warn: #c8a45a;
+      --fast: #e87a7a;
+      --radius-ring: 152px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      display: none; width: 100%; max-width: 420px;
+      flex-direction: column; align-items: center; gap: 20px;
+    }
+    .screen.active { display: flex; }
+    #screen-brew {
+      height: calc(100dvh - 44px);
+      overflow-y: auto;
+    }
+    #screen-brew .btn-row { margin-top: auto; }
+
+    /* ── INTRO ── */
+    .intro-header { text-align: center; }
+    .intro-header h1 {
+      font-size: 0.95rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--text-muted); font-weight: 500;
+    }
+    .intro-header h2 {
+      font-size: 1.9rem; font-weight: 300; color: var(--text);
+      margin-top: 4px; letter-spacing: -0.02em;
+    }
+
+    /* ── DOSE SELECTOR ── */
+    .dose-selector { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+    .dose-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 6px; color: var(--text-muted); cursor: pointer; text-align: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s; line-height: 1.3;
+    }
+    .dose-btn .dose-name { font-size: 0.84rem; }
+    .dose-btn .dose-ratio { font-size: 0.68rem; color: var(--text-dim); margin-top: 2px; }
+    .dose-btn.active {
+      background: var(--surface2); border-color: var(--pour);
+      color: var(--text);
+    }
+    .dose-btn.active .dose-ratio { color: var(--pour); }
+
+    /* ── RECIPE CARD ── */
+    .recipe-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px 20px; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .recipe-item label {
+      display: block; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .recipe-item span { font-size: 1.4rem; font-weight: 300; color: var(--text); }
+    .recipe-item span small { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* ── LAST BREW ── */
+    .last-brew {
+      width: 100%; padding: 11px 15px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 11px;
+      display: none; align-items: center; justify-content: space-between;
+    }
+    .last-brew-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+    .lb-right { display: flex; align-items: center; gap: 10px; }
+    .lb-time { font-size: 1.1rem; font-weight: 300; font-variant-numeric: tabular-nums; }
+    .lb-verdict { font-size: 0.72rem; color: var(--text-dim); }
+
+    /* ── CIRCLE ── */
+    .circle-wrap {
+      position: relative;
+      width: calc(var(--radius-ring) * 2);
+      height: calc(var(--radius-ring) * 2);
+      flex-shrink: 0;
+    }
+    .circle-wrap.clickable { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .circle-wrap svg.ring {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      transform: rotate(-90deg); overflow: visible;
+    }
+    .ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
+    .ring-progress {
+      fill: none; stroke: var(--pour); stroke-width: 3; stroke-linecap: round;
+      transition: stroke-dashoffset 0.35s linear, stroke 0.4s ease;
+    }
+    .circle-inner {
+      position: absolute; inset: 12px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; transition: background 0.25s ease;
+    }
+    .clickable:hover .circle-inner,
+    .clickable:active .circle-inner { background: var(--surface2); }
+
+    .circle-label { font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+    .circle-action { font-size: 1.8rem; font-weight: 300; letter-spacing: -0.02em; color: var(--text); line-height: 1; }
+    .circle-timer {
+      font-size: 2.8rem; font-weight: 200; letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums; color: var(--text); line-height: 1;
+    }
+    .circle-sublabel {
+      font-size: 0.6rem; letter-spacing: 0.08em; color: var(--text-muted);
+      text-align: center; padding: 0 14px; line-height: 1.4;
+    }
+
+    @keyframes ring-pulse {
+      0%, 100% { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--pour) 35%, transparent)); }
+      50%       { filter: drop-shadow(0 0 16px color-mix(in srgb, var(--pour) 65%, transparent)); }
+    }
+    .circle-wrap.pouring svg.ring { animation: ring-pulse 2s ease-in-out infinite; }
+
+    /* ── BREW SCREEN ── */
+    .brew-top { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; }
+    .brew-top-left { display: flex; flex-direction: column; gap: 2px; }
+    .brew-top-title { font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+    .brew-total-elapsed { font-size: 0.65rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+    .brew-top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .brew-top-step { font-size: 0.65rem; color: var(--text-dim); }
+
+    /* ── TRACK ── */
+    .steps-track { width: 100%; display: flex; gap: 4px; }
+    .track-seg {
+      flex: 1; height: 3px; border-radius: 2px; background: var(--border);
+      overflow: hidden; position: relative;
+    }
+    .track-seg-fill { position: absolute; inset: 0; width: 0%; border-radius: 2px; }
+    .track-seg.pour  .track-seg-fill { background: var(--pour); }
+    .track-seg.wait  .track-seg-fill { background: var(--wait); }
+    .track-seg.swirl .track-seg-fill { background: var(--swirl); }
+    .track-seg.done  .track-seg-fill { background: var(--done); }
+    .track-seg.complete .track-seg-fill { width: 100%; }
+    .track-seg.active .track-seg-fill { width: 40%; animation: pulse-track 1.4s ease-in-out infinite; }
+    @keyframes pulse-track { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ── STEP DISPLAY ── */
+    .step-display {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px 18px; min-height: 120px;
+      display: flex; flex-direction: column; justify-content: center; gap: 5px;
+      transition: border-color 0.3s ease;
+    }
+    .step-display.pour  { border-color: color-mix(in srgb, var(--pour)  40%, transparent); }
+    .step-display.wait  { border-color: color-mix(in srgb, var(--wait)  40%, transparent); }
+    .step-display.swirl { border-color: color-mix(in srgb, var(--swirl) 40%, transparent); }
+
+    .step-type-tag { font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+    .step-type-tag.pour  { color: var(--pour-light); }
+    .step-type-tag.wait  { color: var(--wait-light); }
+    .step-type-tag.swirl { color: var(--swirl); }
+
+    .step-instruction { font-size: 1rem; font-weight: 300; color: var(--text); line-height: 1.5; }
+    .step-weight { font-size: 0.82rem; color: var(--pour); margin-top: 1px; min-height: 1.1em; }
+
+    /* ── NEXT STEP ── */
+    .next-step {
+      width: 100%; padding: 10px 14px; background: transparent;
+      border: 1px dashed var(--border); border-radius: 11px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .next-step-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); flex-shrink: 0; }
+    .next-step-text { font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; }
+
+    /* ── BUTTONS ── */
+    .btn-row { display: flex; gap: 9px; width: 100%; }
+    .btn-ghost {
+      flex: 1; background: none; border: 1px solid var(--border); color: var(--text-muted);
+      font-size: 0.78rem; padding: 9px 14px; border-radius: 9px; cursor: pointer;
+      letter-spacing: 0.05em; transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+    .btn-skip {
+      flex: 2; position: relative; overflow: hidden;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      font-size: 0.82rem; padding: 9px 14px; border-radius: 9px; cursor: pointer;
+      letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center;
+      gap: 5px; transition: border-color 0.2s; -webkit-tap-highlight-color: transparent;
+    }
+    .btn-skip:hover { border-color: var(--text-dim); }
+    .skip-fill {
+      position: absolute; inset: 0; border-radius: inherit;
+      background: color-mix(in srgb, var(--pour) 22%, transparent);
+      transform: scaleX(0); transform-origin: left; pointer-events: none;
+    }
+    .btn-skip.holding .skip-fill { transform: scaleX(1); transition: transform 0.8s linear; }
+    .skip-text { position: relative; }
+    .skip-arrow { position: relative; font-size: 0.95rem; }
+
+    /* ── RECAP ── */
+    .recap-header { text-align: center; width: 100%; }
+    .recap-eyebrow { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
+    .recap-time {
+      font-size: 3.4rem; font-weight: 200; letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums; margin: 6px 0 4px;
+    }
+    .recap-verdict { font-size: 0.88rem; font-weight: 400; }
+    .recap-verdict.good { color: var(--done); }
+    .recap-verdict.warn { color: var(--warn); }
+    .recap-verdict.bad  { color: var(--fast); }
+
+    .recap-rows { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .recap-row {
+      display: flex; align-items: center; padding: 9px 13px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 9px; gap: 9px;
+    }
+    .recap-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .recap-dot.pour  { background: var(--pour); }
+    .recap-dot.wait  { background: var(--wait); }
+    .recap-dot.swirl { background: var(--swirl); }
+    .recap-row-name { font-size: 0.82rem; color: var(--text-muted); flex: 1; }
+    .recap-row-actual { font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+    .recap-row-target { font-size: 0.7rem; color: var(--text-dim); font-variant-numeric: tabular-nums; margin-left: 4px; }
+    .recap-total {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 13px; border-top: 1px solid var(--border); width: 100%;
+    }
+    .recap-total-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+    .recap-total-time { font-size: 1.1rem; font-weight: 300; font-variant-numeric: tabular-nums; }
+
+    .recap-tip {
+      width: 100%; padding: 13px 16px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+      font-size: 0.83rem; color: var(--text-muted); line-height: 1.55;
+    }
+    .recap-tip strong { color: var(--text); font-weight: 500; }
+
+    .btn-primary {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-size: 0.9rem; padding: 13px; border-radius: 12px;
+      cursor: pointer; letter-spacing: 0.06em; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #2e2c29; }
+
+    /* ── CREDIT ── */
+    .credit {
+      font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.04em; text-align: center;
+    }
+    .credit a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border); padding-bottom: 1px; }
+    .credit a:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-height: 730px) {
+      :root { --radius-ring: 124px; }
+      .screen { gap: 14px; }
+      body { padding: 14px; }
+      .circle-timer { font-size: 2.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── INTRO SCREEN ── -->
+<div class="screen active" id="screen-intro">
+  <div class="intro-header">
+    <h1>James Hoffmann</h1>
+    <h2>V60 Pour Along</h2>
+  </div>
+
+  <div class="dose-selector">
+    <button class="dose-btn active" onclick="setDose(0)">
+      <div class="dose-name">1 cup</div>
+      <div class="dose-ratio">15g / 250g</div>
+    </button>
+    <button class="dose-btn" onclick="setDose(1)">
+      <div class="dose-name">1½ cups</div>
+      <div class="dose-ratio">22g / 370g</div>
+    </button>
+    <button class="dose-btn" onclick="setDose(2)">
+      <div class="dose-name">2 cups</div>
+      <div class="dose-ratio">30g / 500g</div>
+    </button>
+  </div>
+
+  <div class="recipe-card">
+    <div class="recipe-item">
+      <label>Coffee</label>
+      <span><span id="rc-coffee">15</span> <small>g</small></span>
+    </div>
+    <div class="recipe-item">
+      <label>Water</label>
+      <span><span id="rc-water">250</span> <small>g</small></span>
+    </div>
+    <div class="recipe-item">
+      <label>Grind</label>
+      <span style="font-size:1rem">Medium <small>fine</small></span>
+    </div>
+    <div class="recipe-item">
+      <label>Target time</label>
+      <span>3:00 <small>–3:30</small></span>
+    </div>
+  </div>
+
+  <div class="last-brew" id="last-brew">
+    <div class="last-brew-label">Last brew</div>
+    <div class="lb-right">
+      <span class="lb-time" id="lb-time"></span>
+      <span class="lb-verdict" id="lb-verdict"></span>
+    </div>
+  </div>
+
+  <div class="circle-wrap clickable" onclick="startBrew()">
+    <svg class="ring" viewBox="0 0 304 304">
+      <circle class="ring-bg" cx="152" cy="152" r="144"/>
+    </svg>
+    <div class="circle-inner">
+      <div class="circle-action">Go</div>
+    </div>
+  </div>
+
+  <div class="credit">
+    Technique by <a href="https://www.youtube.com/@jameshoffmann" target="_blank" rel="noopener">James Hoffmann</a>
+  </div>
+</div>
+
+<!-- ── BREW SCREEN ── -->
+<div class="screen" id="screen-brew">
+  <div class="brew-top">
+    <div class="brew-top-left">
+      <div class="brew-top-title">V60 Pour Along</div>
+      <div class="brew-total-elapsed" id="brew-total">0:00 total</div>
+    </div>
+    <div class="brew-top-right">
+      <div id="step-counter" class="brew-top-step">Step 1 of 6</div>
+    </div>
+  </div>
+
+  <div class="steps-track" id="steps-track"></div>
+
+  <div class="step-display" id="step-display">
+    <div class="step-type-tag pour" id="step-tag">Pour</div>
+    <div class="step-instruction" id="step-instruction">Loading…</div>
+    <div class="step-weight" id="step-weight"></div>
+  </div>
+
+  <div class="circle-wrap" id="brew-circle">
+    <svg class="ring" viewBox="0 0 304 304">
+      <circle class="ring-bg" cx="152" cy="152" r="144"/>
+      <circle class="ring-progress" id="ring-progress" cx="152" cy="152" r="144"/>
+    </svg>
+    <div class="circle-inner">
+      <div class="circle-label" id="brew-label">remaining</div>
+      <div class="circle-timer" id="brew-timer">0:00</div>
+    </div>
+  </div>
+
+  <div class="next-step" id="next-step-box">
+    <div class="next-step-label">Next</div>
+    <div class="next-step-text" id="next-step-text">–</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-ghost" onclick="resetBrew()">Start over</button>
+    <button class="btn-skip" id="skip-btn">
+      <span class="skip-fill" id="skip-fill"></span>
+      <span class="skip-text" id="skip-text">Hold to skip</span>
+      <span class="skip-arrow">→</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── RECAP SCREEN ── -->
+<div class="screen" id="screen-recap">
+  <div class="recap-header">
+    <div class="recap-eyebrow">Brew complete</div>
+    <div class="recap-time" id="recap-time">3:15</div>
+    <div class="recap-verdict" id="recap-verdict"></div>
+  </div>
+
+  <div class="recap-rows" id="recap-rows"></div>
+
+  <div class="recap-tip" id="recap-tip"></div>
+
+  <button class="btn-primary" onclick="resetBrew()">Brew again</button>
+</div>
+
+<script>
+  // ── CONSTANTS ───────────────────────────────────────────────────────
+  const DOSES = [
+    { coffee: 15, water: 250 },
+    { coffee: 22, water: 370 },
+    { coffee: 30, water: 500 },
+  ];
+  const CIRCUMFERENCE = 2 * Math.PI * 144; // matches r=144
+
+  // ── DYNAMIC RECIPE ──────────────────────────────────────────────────
+  let currentDose = 0;
+  let STEPS = [];
+
+  function getSteps() {
+    const dose  = DOSES[currentDose];
+    const scale = dose.water / 250;
+    const bloom = Math.round(50  * scale);
+    const mid   = Math.round(150 * scale);
+    const total = dose.water;
+    return [
+      { type: 'pour',  tag: 'Bloom',       duration: 12, weight: `→ ${bloom}g`,
+        instruction: `Pour ${bloom}g of water in slow spirals from the center outward. Wet every ground.` },
+      { type: 'swirl', tag: 'Swirl',       duration: 8,  weight: null,
+        instruction: 'Gently swirl the V60 so all grounds are evenly saturated. A few slow rotations.' },
+      { type: 'wait',  tag: 'Bloom wait',  duration: 25, weight: null,
+        instruction: 'Wait. Watch the coffee dome and de-gas. Total bloom time ~45 seconds from the start.' },
+      { type: 'pour',  tag: 'First pour',  duration: 30, weight: `→ ${mid}g`,
+        instruction: `Pour slowly in circles from center outward. Take ~30 seconds to reach ${mid}g.` },
+      { type: 'pour',  tag: 'Final pour',  duration: 30, weight: `→ ${total}g`,
+        instruction: `Continue pouring in slow circles to reach ${total}g. Steady and even.` },
+      { type: 'swirl', tag: 'Swirl',       duration: 8,  weight: null,
+        instruction: 'Give the V60 a gentle swirl to level the bed before drawdown.' },
+      { type: 'wait',  tag: 'Drawdown',    duration: 90, weight: null,
+        instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
+    ];
+  }
+
+  // ── STATE ───────────────────────────────────────────────────────────
+  let startTime        = null;
+  let rafId            = null;
+  let currentStepIdx   = 0;
+  let stepStartTime    = 0;
+  let stepEntryElapsed = [0];
+
+  // ── DOM ─────────────────────────────────────────────────────────────
+  const screenIntro  = document.getElementById('screen-intro');
+  const screenBrew   = document.getElementById('screen-brew');
+  const screenRecap  = document.getElementById('screen-recap');
+  const brewTimer    = document.getElementById('brew-timer');
+  const brewTotal    = document.getElementById('brew-total');
+  const brewLabel    = document.getElementById('brew-label');
+  const stepCounter  = document.getElementById('step-counter');
+  const stepDisplay  = document.getElementById('step-display');
+  const stepTag      = document.getElementById('step-tag');
+  const stepInstr    = document.getElementById('step-instruction');
+  const stepWeight   = document.getElementById('step-weight');
+  const nextStepBox  = document.getElementById('next-step-box');
+  const nextStepText = document.getElementById('next-step-text');
+  const ringProgress = document.getElementById('ring-progress');
+  const stepsTrack   = document.getElementById('steps-track');
+  const brewCircle   = document.getElementById('brew-circle');
+  const skipBtn      = document.getElementById('skip-btn');
+  const skipText     = document.getElementById('skip-text');
+
+  // ── HELPERS ─────────────────────────────────────────────────────────
+  function fmtTime(s) {
+    s = Math.max(0, s);
+    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  }
+
+  function now() { return (Date.now() - startTime) / 1000; }
+
+  function verdictInfo(secs) {
+    if (secs < 150) return { text: 'Very fast — way under target', cls: 'bad',  short: 'very fast' };
+    if (secs < 180) return { text: 'A touch fast — try slightly finer', cls: 'warn', short: 'a touch fast' };
+    if (secs <= 210) return { text: 'Right in the zone', cls: 'good', short: 'in the zone' };
+    if (secs <= 250) return { text: 'A touch slow — try slightly coarser', cls: 'warn', short: 'a touch slow' };
+    return { text: 'Very slow — try a coarser grind', cls: 'bad', short: 'very slow' };
+  }
+
+  // ── AUDIO ───────────────────────────────────────────────────────────
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function unlockAudio() {
+    try {
+      const ctx = getAudioCtx();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) {}
+  }
+
+  function playChime(freqs, offsets, vol = 0.22) {
+    try {
+      const ctx = getAudioCtx();
+      freqs.forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + (offsets[i] || 0);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(vol, t + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
+        osc.start(t);
+        osc.stop(t + 1.1);
+      });
+    } catch (e) {}
+  }
+
+  function playStepChime() { playChime([880], [0]); }
+  function playDoneChime() { playChime([523, 659, 784], [0, 0.18, 0.36], 0.2); }
+
+  // ── VIBRATION ───────────────────────────────────────────────────────
+  function vibe(pattern) {
+    try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) {}
+  }
+
+  // ── WAKE LOCK ───────────────────────────────────────────────────────
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {}
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && startTime && !wakeLock) requestWakeLock();
+  });
+
+  // ── HISTORY ─────────────────────────────────────────────────────────
+  function saveHistory(totalSecs) {
+    try {
+      const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
+      history.unshift({ totalSecs, short: verdictInfo(totalSecs).short, date: Date.now() });
+      localStorage.setItem('v60-history', JSON.stringify(history.slice(0, 10)));
+    } catch (e) {}
+  }
+
+  function loadHistory() {
+    try {
+      const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
+      if (history.length > 0) {
+        const last = history[0];
+        document.getElementById('lb-time').textContent = fmtTime(last.totalSecs);
+        document.getElementById('lb-verdict').textContent = last.short;
+        document.getElementById('last-brew').style.display = 'flex';
+      }
+    } catch (e) {}
+  }
+
+  // ── DOSE SELECTOR ───────────────────────────────────────────────────
+  function setDose(idx) {
+    currentDose = idx;
+    document.querySelectorAll('.dose-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+    const dose = DOSES[idx];
+    document.getElementById('rc-coffee').textContent = dose.coffee;
+    document.getElementById('rc-water').textContent  = dose.water;
+  }
+
+  // ── TRACK ───────────────────────────────────────────────────────────
+  function buildTrack() {
+    stepsTrack.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const seg  = document.createElement('div');
+      seg.className = `track-seg ${s.type}`;
+      seg.id = `track-${i}`;
+      const fill = document.createElement('div');
+      fill.className = 'track-seg-fill';
+      seg.appendChild(fill);
+      stepsTrack.appendChild(seg);
+    });
+  }
+
+  function updateTrack() {
+    STEPS.forEach((_, i) => {
+      const seg = document.getElementById(`track-${i}`);
+      seg.classList.remove('complete', 'active');
+      if (i < currentStepIdx)       seg.classList.add('complete');
+      else if (i === currentStepIdx) seg.classList.add('active');
+    });
+  }
+
+  // ── STEP UI ─────────────────────────────────────────────────────────
+  function applyStepUI(idx) {
+    const s      = STEPS[idx];
+    const isLast = idx === STEPS.length - 1;
+
+    stepDisplay.className = `step-display ${s.type}`;
+    stepTag.className     = `step-type-tag ${s.type}`;
+    stepTag.textContent   = s.tag;
+    stepInstr.textContent = s.instruction;
+    stepWeight.textContent = s.weight || '';
+    stepCounter.textContent = `Step ${idx + 1} of ${STEPS.length}`;
+
+    const next = STEPS[idx + 1];
+    nextStepBox.style.visibility = next ? 'visible' : 'hidden';
+    if (next) nextStepText.textContent = `${next.tag} — ${next.instruction.split('.')[0]}.`;
+
+    brewCircle.className = `circle-wrap${s.type === 'pour' ? ' pouring' : ''}`;
+
+    const colors = { pour: 'var(--pour)', wait: 'var(--wait)', swirl: 'var(--swirl)' };
+    ringProgress.style.stroke = colors[s.type] || 'var(--wait)';
+
+    brewLabel.textContent = isLast ? 'elapsed' : 'remaining';
+
+    skipText.textContent = isLast ? 'Finish' : 'Hold to skip';
+  }
+
+  // ── TICK ────────────────────────────────────────────────────────────
+  function tick() {
+    const elapsed    = now();
+    const stepElapsed = elapsed - stepStartTime;
+    const s          = STEPS[currentStepIdx];
+    const isLast     = currentStepIdx === STEPS.length - 1;
+
+    // auto-advance non-last steps
+    if (!isLast && stepElapsed >= s.duration) {
+      moveToStep(currentStepIdx + 1, elapsed);
+      return;
+    }
+
+    // timers
+    brewTimer.textContent = isLast ? fmtTime(stepElapsed) : fmtTime(Math.max(0, s.duration - stepElapsed));
+    brewTotal.textContent = fmtTime(elapsed) + ' total';
+
+    // last step: ring fills at target, then stays green
+    if (isLast && stepElapsed >= s.duration) {
+      ringProgress.style.stroke = 'var(--done)';
+    }
+
+    // ring
+    const fraction = Math.min(stepElapsed / s.duration, 1);
+    ringProgress.style.strokeDasharray  = CIRCUMFERENCE;
+    ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
+
+    updateTrack();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // ── NAVIGATION ──────────────────────────────────────────────────────
+  function moveToStep(idx, atElapsed) {
+    currentStepIdx = idx;
+    stepStartTime  = atElapsed;
+    stepEntryElapsed.push(atElapsed);
+    playStepChime();
+    vibe([80]);
+    applyStepUI(idx);
+    updateTrack();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function skipStep() {
+    cancelAnimationFrame(rafId);
+    const t = now();
+    if (currentStepIdx >= STEPS.length - 1) { showRecap(t); return; }
+    moveToStep(currentStepIdx + 1, t);
+  }
+
+  // ── HOLD TO SKIP ────────────────────────────────────────────────────
+  let holdTimer = null;
+
+  function startHold() {
+    skipBtn.classList.add('holding');
+    holdTimer = setTimeout(() => {
+      skipBtn.classList.remove('holding');
+      holdTimer = null;
+      skipStep();
+    }, 800);
+  }
+
+  function cancelHold() {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    skipBtn.classList.remove('holding');
+  }
+
+  skipBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (currentStepIdx >= STEPS.length - 1) {
+      skipStep(); // last step: tap
+    } else {
+      startHold();
+    }
+  });
+  skipBtn.addEventListener('pointerup',     cancelHold);
+  skipBtn.addEventListener('pointercancel', cancelHold);
+  skipBtn.addEventListener('pointerleave',  cancelHold);
+
+  // ── RECAP ───────────────────────────────────────────────────────────
+  function showRecap(totalSecs) {
+    releaseWakeLock();
+    saveHistory(totalSecs);
+    playDoneChime();
+    vibe([100, 60, 100, 60, 200]);
+
+    const v = verdictInfo(totalSecs);
+    document.getElementById('recap-time').textContent   = fmtTime(totalSecs);
+    const vEl = document.getElementById('recap-verdict');
+    vEl.textContent = v.text;
+    vEl.className   = `recap-verdict ${v.cls}`;
+
+    const tips = {
+      bad_fast: '<strong>Try a finer grind.</strong> Water moved through too quickly. Go noticeably finer and aim for 3:00–3:30.',
+      warn_fast: '<strong>Small adjustment needed.</strong> Dial your grind slightly finer to slow the drawdown into the 3:00–3:30 window.',
+      good: '<strong>Perfect drawdown.</strong> Keep that grind setting. If flavour feels weak, try hotter water or slightly finer. If bitter, try cooler or coarser.',
+      warn_slow: '<strong>Small adjustment needed.</strong> Dial your grind slightly coarser to speed the drawdown into the 3:00–3:30 window.',
+      bad_slow: '<strong>Try a coarser grind.</strong> Water is struggling to drain. Go noticeably coarser and aim for 3:00–3:30.',
+    };
+    const tipKey = totalSecs < 150 ? 'bad_fast' : totalSecs < 180 ? 'warn_fast' : totalSecs <= 210 ? 'good' : totalSecs <= 250 ? 'warn_slow' : 'bad_slow';
+    document.getElementById('recap-tip').innerHTML = tips[tipKey];
+
+    const actualDurations = STEPS.map((_, i) => {
+      const start = stepEntryElapsed[i] ?? 0;
+      const end   = stepEntryElapsed[i + 1] ?? totalSecs;
+      return end - start;
+    });
+
+    const STEP_TARGETS = [12, 8, 25, 30, 30, 8, null];
+    const rowsEl = document.getElementById('recap-rows');
+    rowsEl.innerHTML = '';
+    STEPS.forEach((s, i) => {
+      const row    = document.createElement('div');
+      row.className = 'recap-row';
+      const dot    = document.createElement('div');
+      dot.className = `recap-dot ${s.type}`;
+      const name   = document.createElement('div');
+      name.className = 'recap-row-name';
+      name.textContent = s.tag;
+      const actual = document.createElement('div');
+      actual.className = 'recap-row-actual';
+      actual.textContent = fmtTime(actualDurations[i]);
+      const tgt  = document.createElement('div');
+      tgt.className = 'recap-row-target';
+      tgt.textContent = STEP_TARGETS[i] ? `/ ~${fmtTime(STEP_TARGETS[i])}` : '';
+      row.append(dot, name, actual, tgt);
+      rowsEl.appendChild(row);
+    });
+
+    const totalRow = document.createElement('div');
+    totalRow.className = 'recap-total';
+    totalRow.innerHTML = `<span class="recap-total-label">Total</span><span class="recap-total-time">${fmtTime(totalSecs)}</span>`;
+    rowsEl.appendChild(totalRow);
+
+    screenBrew.classList.remove('active');
+    screenRecap.classList.add('active');
+  }
+
+  // ── CONTROLS ────────────────────────────────────────────────────────
+  function startBrew() {
+    unlockAudio();
+    requestWakeLock();
+
+    STEPS = getSteps();
+    buildTrack();
+    currentStepIdx   = 0;
+    stepStartTime    = 0;
+    stepEntryElapsed = [0];
+    startTime = Date.now();
+
+    ringProgress.style.strokeDasharray  = CIRCUMFERENCE;
+    ringProgress.style.strokeDashoffset = CIRCUMFERENCE;
+    ringProgress.style.stroke = 'var(--pour)';
+
+    screenIntro.classList.remove('active');
+    screenBrew.classList.add('active');
+
+    applyStepUI(0);
+    updateTrack();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function resetBrew() {
+    cancelAnimationFrame(rafId);
+    cancelHold();
+    releaseWakeLock();
+    startTime = null;
+    screenBrew.classList.remove('active');
+    screenRecap.classList.remove('active');
+    loadHistory(); // refresh in case we just saved
+    screenIntro.classList.add('active');
+  }
+
+  // ── INIT ────────────────────────────────────────────────────────────
+  setDose(0);
+  loadHistory();
+</script>
+</body>
+</html>

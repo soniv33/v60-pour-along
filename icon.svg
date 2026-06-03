@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#0f0e0d"/>
+  <!-- rim -->
+  <rect x="34" y="50" width="124" height="14" rx="7" fill="#c8965a"/>
+  <!-- cone body -->
+  <path d="M 46 64 L 96 154 L 146 64 Z" fill="none" stroke="#c8965a" stroke-width="7" stroke-linejoin="round"/>
+  <!-- V60 ridges -->
+  <line x1="70" y1="78" x2="90" y2="134" stroke="#c8965a" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="96" y1="70" x2="96" y2="140" stroke="#c8965a" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="122" y1="78" x2="102" y2="134" stroke="#c8965a" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+  <!-- bottom hole -->
+  <circle cx="96" cy="154" r="5" fill="#c8965a"/>
+</svg>
