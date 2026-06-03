@@ -105,14 +105,39 @@
     /* ── RECIPE CARD ── */
     .recipe-card {
       background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-      padding: 16px 20px; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      padding: 16px 20px; width: 100%; display: flex; flex-direction: column; gap: 10px;
     }
-    .recipe-item label {
-      display: block; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--text-muted); margin-bottom: 4px;
+    .rc-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .rc-label {
+      font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-muted); flex-shrink: 0;
     }
-    .recipe-item span { font-size: 1.4rem; font-weight: 300; color: var(--text); }
-    .recipe-item span small { font-size: 0.8rem; color: var(--text-muted); }
+    .rc-value { font-size: 1.3rem; font-weight: 300; color: var(--text); }
+    .rc-muted { font-size: 0.8rem; color: var(--text-muted); }
+    .rc-stepper { display: flex; align-items: center; gap: 8px; }
+    .rc-stepper-val { font-size: 1.3rem; font-weight: 300; color: var(--text); min-width: 2.8ch; text-align: right; }
+    .rc-stepper-unit { font-size: 0.8rem; color: var(--text-muted); }
+    .step-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 6px; width: 26px; height: 26px; font-size: 1rem; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .step-btn:hover { border-color: var(--pour); color: var(--pour); }
+    .step-btn:active { background: var(--surface2); }
+    .rc-link { display: flex; align-items: center; gap: 8px; }
+    .rc-link-line { flex: 1; height: 1px; background: var(--border); }
+    .rc-link-text { font-size: 0.58rem; letter-spacing: 0.06em; color: var(--text-dim); white-space: nowrap; }
+    .rc-grind-block { display: flex; flex-direction: column; gap: 7px; }
+    .rc-grind { display: flex; gap: 5px; }
+    .grind-pill {
+      flex: 1; background: none; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 20px; padding: 5px 4px; font-size: 0.7rem; cursor: pointer; text-align: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .grind-pill.active { background: var(--surface2); border-color: var(--pour); color: var(--text); }
 
     /* ── LAST BREW ── */
     .last-brew {
@@ -330,21 +355,43 @@
   </div>
 
   <div class="recipe-card">
-    <div class="recipe-item">
-      <label>Coffee</label>
-      <span><span id="rc-coffee">15</span> <small>g</small></span>
+    <div class="rc-row">
+      <span class="rc-label">Coffee</span>
+      <div class="rc-stepper">
+        <button class="step-btn" onclick="adjustCoffee(-1)">−</button>
+        <span class="rc-stepper-val" id="rc-coffee">15</span>
+        <span class="rc-stepper-unit">g</span>
+        <button class="step-btn" onclick="adjustCoffee(1)">+</button>
+      </div>
     </div>
-    <div class="recipe-item">
-      <label>Water</label>
-      <span><span id="rc-water">250</span> <small>g</small></span>
+    <div class="rc-link">
+      <div class="rc-link-line"></div>
+      <span class="rc-link-text">ratio · auto-adjusts</span>
+      <div class="rc-link-line"></div>
     </div>
-    <div class="recipe-item">
-      <label>Grind</label>
-      <span style="font-size:1rem">Medium <small>fine</small></span>
+    <div class="rc-row">
+      <span class="rc-label">Water</span>
+      <div class="rc-stepper">
+        <button class="step-btn" onclick="adjustWater(-5)">−</button>
+        <span class="rc-stepper-val" id="rc-water">250</span>
+        <span class="rc-stepper-unit">g</span>
+        <button class="step-btn" onclick="adjustWater(5)">+</button>
+      </div>
     </div>
-    <div class="recipe-item">
-      <label>Target time</label>
-      <span>3:00 <small>–3:30</small></span>
+    <div class="rc-link"><div class="rc-link-line"></div></div>
+    <div class="rc-grind-block">
+      <span class="rc-label">Grind</span>
+      <div class="rc-grind">
+        <button class="grind-pill" onclick="setGrind(0)">Fine</button>
+        <button class="grind-pill active" onclick="setGrind(1)">Med-Fine</button>
+        <button class="grind-pill" onclick="setGrind(2)">Medium</button>
+        <button class="grind-pill" onclick="setGrind(3)">Coarse</button>
+      </div>
+    </div>
+    <div class="rc-link"><div class="rc-link-line"></div></div>
+    <div class="rc-row">
+      <span class="rc-label">Target time</span>
+      <span class="rc-value">3:00 <span class="rc-muted">– 3:30</span></span>
     </div>
   </div>
 
@@ -438,15 +485,18 @@
   const CIRCUMFERENCE = 2 * Math.PI * 144; // matches r=144
 
   // ── DYNAMIC RECIPE ──────────────────────────────────────────────────
-  let currentDose = 0;
+  let currentDose  = 0;
+  let customCoffee = 15;
+  let customWater  = 250;
+  let currentRatio = 250 / 15;
+  let currentGrind = 1;
   let STEPS = [];
 
   function getSteps() {
-    const dose  = DOSES[currentDose];
-    const scale = dose.water / 250;
+    const scale = customWater / 250;
     const bloom = Math.round(50  * scale);
     const mid   = Math.round(150 * scale);
-    const total = dose.water;
+    const total = customWater;
     return [
       { type: 'pour',  tag: 'Bloom',       duration: 12, weight: `→ ${bloom}g`,
         instruction: `Pour ${bloom}g of water in slow spirals from the center outward. Wet every ground.` },
@@ -601,11 +651,39 @@
 
   // ── DOSE SELECTOR ───────────────────────────────────────────────────
   function setDose(idx) {
-    currentDose = idx;
+    currentDose  = idx;
     document.querySelectorAll('.dose-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
-    const dose = DOSES[idx];
-    document.getElementById('rc-coffee').textContent = dose.coffee;
-    document.getElementById('rc-water').textContent  = dose.water;
+    const dose   = DOSES[idx];
+    customCoffee = dose.coffee;
+    customWater  = dose.water;
+    currentRatio = dose.water / dose.coffee;
+    updateRecipeDisplay();
+  }
+
+  function updateRecipeDisplay() {
+    document.getElementById('rc-coffee').textContent = customCoffee;
+    document.getElementById('rc-water').textContent  = customWater;
+  }
+
+  function adjustCoffee(delta) {
+    customCoffee = Math.max(5, customCoffee + delta);
+    customWater  = Math.round(customCoffee * currentRatio);
+    currentDose  = -1;
+    document.querySelectorAll('.dose-btn').forEach(btn => btn.classList.remove('active'));
+    updateRecipeDisplay();
+  }
+
+  function adjustWater(delta) {
+    customWater  = Math.max(85, customWater + delta);
+    customCoffee = Math.max(5, Math.round(customWater / currentRatio));
+    currentDose  = -1;
+    document.querySelectorAll('.dose-btn').forEach(btn => btn.classList.remove('active'));
+    updateRecipeDisplay();
+  }
+
+  function setGrind(idx) {
+    currentGrind = idx;
+    document.querySelectorAll('.grind-pill').forEach((btn, i) => btn.classList.toggle('active', i === idx));
   }
 
   // ── TRACK ───────────────────────────────────────────────────────────
