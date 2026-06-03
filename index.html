@@ -84,7 +84,7 @@
     }
     .intro-header h2 {
       font-size: 1.9rem; font-weight: 300; color: var(--text);
-      margin-top: 4px; letter-spacing: -0.02em;
+      margin-top: 4px; letter-spacing: 0;
     }
 
     /* ── DOSE SELECTOR ── */
@@ -105,17 +105,20 @@
     /* ── RECIPE CARD ── */
     .recipe-card {
       background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-      padding: 16px 20px; width: 100%; display: flex; flex-direction: column; gap: 10px;
+      padding: 13px 16px; width: 100%; display: flex; flex-direction: column; gap: 9px;
     }
     .rc-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .rc-amounts { display: flex; gap: 8px; }
+    .rc-amount-col { flex: 1; display: flex; flex-direction: column; gap: 5px; align-items: center; }
+    .rc-amount-col .rc-label { align-self: flex-start; }
     .rc-label {
       font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--text-muted); flex-shrink: 0;
     }
     .rc-value { font-size: 1.3rem; font-weight: 300; color: var(--text); }
     .rc-muted { font-size: 0.8rem; color: var(--text-muted); }
-    .rc-stepper { display: flex; align-items: center; gap: 8px; }
-    .rc-stepper-val { font-size: 1.3rem; font-weight: 300; color: var(--text); min-width: 2.8ch; text-align: right; }
+    .rc-stepper { display: flex; align-items: center; gap: 7px; }
+    .rc-stepper-val { font-size: 1.3rem; font-weight: 300; color: var(--text); min-width: 2.8ch; text-align: center; }
     .rc-stepper-unit { font-size: 0.8rem; color: var(--text-muted); }
     .step-btn {
       background: none; border: 1px solid var(--border); color: var(--text-muted);
@@ -129,11 +132,11 @@
     .rc-link { display: flex; align-items: center; gap: 8px; }
     .rc-link-line { flex: 1; height: 1px; background: var(--border); }
     .rc-link-text { font-size: 0.58rem; letter-spacing: 0.06em; color: var(--text-dim); white-space: nowrap; }
-    .rc-grind-block { display: flex; flex-direction: column; gap: 7px; }
+    .rc-grind-block { display: flex; flex-direction: column; gap: 6px; }
     .rc-grind { display: flex; gap: 5px; }
     .grind-pill {
       flex: 1; background: none; border: 1px solid var(--border); color: var(--text-muted);
-      border-radius: 20px; padding: 5px 4px; font-size: 0.7rem; cursor: pointer; text-align: center;
+      border-radius: 20px; padding: 4px 4px; font-size: 0.68rem; cursor: pointer; text-align: center;
       transition: border-color 0.15s, background 0.15s, color 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -317,7 +320,7 @@
 
     /* ── CREDIT ── */
     .credit {
-      font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.04em; text-align: center;
+      font-size: 0.68rem; font-weight: 300; color: var(--text-dim); letter-spacing: 0; text-align: center;
     }
     .credit a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border); padding-bottom: 1px; }
     .credit a:hover { color: var(--text); border-color: var(--text-muted); }
@@ -355,13 +358,24 @@
   </div>
 
   <div class="recipe-card">
-    <div class="rc-row">
-      <span class="rc-label">Coffee</span>
-      <div class="rc-stepper">
-        <button class="step-btn" onclick="adjustCoffee(-1)">−</button>
-        <span class="rc-stepper-val" id="rc-coffee">15</span>
-        <span class="rc-stepper-unit">g</span>
-        <button class="step-btn" onclick="adjustCoffee(1)">+</button>
+    <div class="rc-amounts">
+      <div class="rc-amount-col">
+        <span class="rc-label">Coffee</span>
+        <div class="rc-stepper">
+          <button class="step-btn" onclick="adjustCoffee(-1)">−</button>
+          <span class="rc-stepper-val" id="rc-coffee">15</span>
+          <span class="rc-stepper-unit">g</span>
+          <button class="step-btn" onclick="adjustCoffee(1)">+</button>
+        </div>
+      </div>
+      <div class="rc-amount-col">
+        <span class="rc-label">Water</span>
+        <div class="rc-stepper">
+          <button class="step-btn" onclick="adjustWater(-5)">−</button>
+          <span class="rc-stepper-val" id="rc-water">250</span>
+          <span class="rc-stepper-unit">g</span>
+          <button class="step-btn" onclick="adjustWater(5)">+</button>
+        </div>
       </div>
     </div>
     <div class="rc-link">
@@ -369,16 +383,6 @@
       <span class="rc-link-text">ratio · auto-adjusts</span>
       <div class="rc-link-line"></div>
     </div>
-    <div class="rc-row">
-      <span class="rc-label">Water</span>
-      <div class="rc-stepper">
-        <button class="step-btn" onclick="adjustWater(-5)">−</button>
-        <span class="rc-stepper-val" id="rc-water">250</span>
-        <span class="rc-stepper-unit">g</span>
-        <button class="step-btn" onclick="adjustWater(5)">+</button>
-      </div>
-    </div>
-    <div class="rc-link"><div class="rc-link-line"></div></div>
     <div class="rc-grind-block">
       <span class="rc-label">Grind</span>
       <div class="rc-grind">
