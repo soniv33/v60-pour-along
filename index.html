@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>V60 Pour Along</title>
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0f0e0d" />
+  <meta name="theme-color" content="#0f0e0d" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f1eb" media="(prefers-color-scheme: light)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="V60" />
@@ -30,6 +31,25 @@
       --warn: #c8a45a;
       --fast: #e87a7a;
       --radius-ring: 152px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f1eb;
+        --surface: #ffffff;
+        --surface2: #ece7df;
+        --border: #d4cec5;
+        --text: #1c1a17;
+        --text-muted: #706a61;
+        --text-dim: #a09890;
+        --pour: #a06830;
+        --pour-light: #b47840;
+        --wait: #3d7a60;
+        --wait-light: #4d8a70;
+        --swirl: #5a54b0;
+        --done: #3a8a50;
+        --warn: #a08030;
+        --fast: #c05050;
+      }
     }
 
     body {
@@ -147,6 +167,15 @@
       50%       { filter: drop-shadow(0 0 16px color-mix(in srgb, var(--pour) 65%, transparent)); }
     }
     .circle-wrap.pouring svg.ring { animation: ring-pulse 2s ease-in-out infinite; }
+    #brew-circle { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .circle-pause-icon {
+      position: absolute; font-size: 1.6rem; color: var(--text-muted);
+      display: none; pointer-events: none; line-height: 1;
+    }
+    .circle-wrap.paused .circle-pause-icon { display: block; }
+    .circle-wrap.paused .circle-timer,
+    .circle-wrap.paused .circle-label { opacity: 0.18; }
+    .circle-wrap.paused svg.ring { animation-play-state: paused; opacity: 0.5; }
 
     /* ── BREW SCREEN ── */
     .brew-top { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; }
@@ -209,21 +238,12 @@
     .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
 
     .btn-skip {
-      flex: 2; position: relative; overflow: hidden;
-      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      flex: 2; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
       font-size: 0.82rem; padding: 9px 14px; border-radius: 9px; cursor: pointer;
       letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center;
-      gap: 5px; transition: border-color 0.2s; -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.2s; -webkit-tap-highlight-color: transparent; user-select: none;
     }
     .btn-skip:hover { border-color: var(--text-dim); }
-    .skip-fill {
-      position: absolute; inset: 0; border-radius: inherit;
-      background: color-mix(in srgb, var(--pour) 22%, transparent);
-      transform: scaleX(0); transform-origin: left; pointer-events: none;
-    }
-    .btn-skip.holding .skip-fill { transform: scaleX(1); transition: transform 0.8s linear; }
-    .skip-text { position: relative; }
-    .skip-arrow { position: relative; font-size: 0.95rem; }
 
     /* ── RECAP ── */
     .recap-header { text-align: center; width: 100%; }
@@ -291,7 +311,6 @@
 <!-- ── INTRO SCREEN ── -->
 <div class="screen active" id="screen-intro">
   <div class="intro-header">
-    <h1>James Hoffmann</h1>
     <h2>V60 Pour Along</h2>
   </div>
 
@@ -379,6 +398,7 @@
     <div class="circle-inner">
       <div class="circle-label" id="brew-label">remaining</div>
       <div class="circle-timer" id="brew-timer">0:00</div>
+      <div class="circle-pause-icon">⏸</div>
     </div>
   </div>
 
@@ -389,11 +409,7 @@
 
   <div class="btn-row">
     <button class="btn-ghost" onclick="resetBrew()">Start over</button>
-    <button class="btn-skip" id="skip-btn">
-      <span class="skip-fill" id="skip-fill"></span>
-      <span class="skip-text" id="skip-text">Hold to skip</span>
-      <span class="skip-arrow">→</span>
-    </button>
+    <button class="btn-skip" id="skip-btn">Skip →</button>
   </div>
 </div>
 
@@ -455,6 +471,9 @@
   let currentStepIdx   = 0;
   let stepStartTime    = 0;
   let stepEntryElapsed = [0];
+  let paused           = false;
+  let pauseStartMs     = null;
+  let pausedTotalMs    = 0;
 
   // ── DOM ─────────────────────────────────────────────────────────────
   const screenIntro  = document.getElementById('screen-intro');
@@ -474,7 +493,6 @@
   const stepsTrack   = document.getElementById('steps-track');
   const brewCircle   = document.getElementById('brew-circle');
   const skipBtn      = document.getElementById('skip-btn');
-  const skipText     = document.getElementById('skip-text');
 
   // ── HELPERS ─────────────────────────────────────────────────────────
   function fmtTime(s) {
@@ -482,7 +500,10 @@
     return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   }
 
-  function now() { return (Date.now() - startTime) / 1000; }
+  function now() {
+    const activePause = paused && pauseStartMs ? Date.now() - pauseStartMs : 0;
+    return (Date.now() - startTime - pausedTotalMs - activePause) / 1000;
+  }
 
   function verdictInfo(secs) {
     if (secs < 150) return { text: 'Very fast — way under target', cls: 'bad',  short: 'very fast' };
@@ -633,7 +654,7 @@
 
     brewLabel.textContent = isLast ? 'elapsed' : 'remaining';
 
-    skipText.textContent = isLast ? 'Finish' : 'Hold to skip';
+    skipBtn.textContent = isLast ? 'Finish' : 'Skip →';
   }
 
   // ── TICK ────────────────────────────────────────────────────────────
@@ -686,34 +707,24 @@
     moveToStep(currentStepIdx + 1, t);
   }
 
-  // ── HOLD TO SKIP ────────────────────────────────────────────────────
-  let holdTimer = null;
-
-  function startHold() {
-    skipBtn.classList.add('holding');
-    holdTimer = setTimeout(() => {
-      skipBtn.classList.remove('holding');
-      holdTimer = null;
-      skipStep();
-    }, 800);
-  }
-
-  function cancelHold() {
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-    skipBtn.classList.remove('holding');
-  }
-
-  skipBtn.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    if (currentStepIdx >= STEPS.length - 1) {
-      skipStep(); // last step: tap
+  // ── PAUSE ───────────────────────────────────────────────────────────
+  function togglePause() {
+    if (!startTime) return;
+    paused = !paused;
+    if (paused) {
+      cancelAnimationFrame(rafId);
+      pauseStartMs = Date.now();
+      brewCircle.classList.add('paused');
     } else {
-      startHold();
+      pausedTotalMs += Date.now() - pauseStartMs;
+      pauseStartMs = null;
+      brewCircle.classList.remove('paused');
+      rafId = requestAnimationFrame(tick);
     }
-  });
-  skipBtn.addEventListener('pointerup',     cancelHold);
-  skipBtn.addEventListener('pointercancel', cancelHold);
-  skipBtn.addEventListener('pointerleave',  cancelHold);
+  }
+
+  brewCircle.addEventListener('click', togglePause);
+  skipBtn.addEventListener('click', skipStep);
 
   // ── RECAP ───────────────────────────────────────────────────────────
   function showRecap(totalSecs) {
@@ -784,6 +795,10 @@
     currentStepIdx   = 0;
     stepStartTime    = 0;
     stepEntryElapsed = [0];
+    paused           = false;
+    pauseStartMs     = null;
+    pausedTotalMs    = 0;
+    brewCircle.classList.remove('paused');
     startTime = Date.now();
 
     ringProgress.style.strokeDasharray  = CIRCUMFERENCE;
@@ -800,8 +815,11 @@
 
   function resetBrew() {
     cancelAnimationFrame(rafId);
-    cancelHold();
     releaseWakeLock();
+    paused = false;
+    pauseStartMs = null;
+    pausedTotalMs = 0;
+    brewCircle.classList.remove('paused');
     startTime = null;
     screenBrew.classList.remove('active');
     screenRecap.classList.remove('active');
