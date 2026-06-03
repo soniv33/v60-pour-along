@@ -78,13 +78,13 @@
 
     /* ── INTRO ── */
     .intro-header { text-align: center; }
-    .intro-header h1 {
-      font-size: 0.95rem; letter-spacing: 0.18em; text-transform: uppercase;
+    .intro-title {
+      font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
       color: var(--text-muted); font-weight: 500;
     }
-    .intro-header h2 {
-      font-size: 1.9rem; font-weight: 300; color: var(--text);
-      margin-top: 4px; letter-spacing: 0;
+    .intro-sub {
+      font-size: 0.6rem; letter-spacing: 0.06em; color: var(--text-dim);
+      font-weight: 300; margin-top: 4px;
     }
 
     /* ── DOSE SELECTOR ── */
@@ -197,10 +197,14 @@
     .circle-wrap.pouring svg.ring { animation: ring-pulse 2s ease-in-out infinite; }
     #brew-circle { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
     .circle-pause-icon {
-      position: absolute; font-size: 1.6rem; color: var(--text-muted);
-      display: none; pointer-events: none; line-height: 1;
+      position: absolute; display: none; pointer-events: none;
+      align-items: center; justify-content: center; gap: 5px;
     }
-    .circle-wrap.paused .circle-pause-icon { display: block; }
+    .circle-pause-icon::before, .circle-pause-icon::after {
+      content: ''; display: block; width: 4px; height: 20px;
+      background: var(--text-muted); border-radius: 2px;
+    }
+    .circle-wrap.paused .circle-pause-icon { display: flex; }
     .circle-wrap.paused .circle-timer,
     .circle-wrap.paused .circle-label { opacity: 0.18; }
     .circle-wrap.paused svg.ring { animation-play-state: paused; opacity: 0.5; }
@@ -318,12 +322,6 @@
     }
     .btn-primary:hover { background: #2e2c29; }
 
-    /* ── CREDIT ── */
-    .credit {
-      font-size: 0.68rem; font-weight: 300; color: var(--text-dim); letter-spacing: 0; text-align: center;
-    }
-    .credit a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border); padding-bottom: 1px; }
-    .credit a:hover { color: var(--text); border-color: var(--text-muted); }
 
     /* ── RESPONSIVE ── */
     @media (max-height: 730px) {
@@ -339,7 +337,8 @@
 <!-- ── INTRO SCREEN ── -->
 <div class="screen active" id="screen-intro">
   <div class="intro-header">
-    <h2>V60 Pour Along</h2>
+    <div class="intro-title">V60 Pour Along</div>
+    <div class="intro-sub">James Hoffmann technique</div>
   </div>
 
   <div class="dose-selector">
@@ -416,9 +415,6 @@
     </div>
   </div>
 
-  <div class="credit">
-    Technique by <a href="https://www.youtube.com/@jameshoffmann" target="_blank" rel="noopener">James Hoffmann</a>
-  </div>
 </div>
 
 <!-- ── BREW SCREEN ── -->
@@ -449,7 +445,7 @@
     <div class="circle-inner">
       <div class="circle-label" id="brew-label">remaining</div>
       <div class="circle-timer" id="brew-timer">0:00</div>
-      <div class="circle-pause-icon">⏸</div>
+      <div class="circle-pause-icon"></div>
     </div>
   </div>
 
