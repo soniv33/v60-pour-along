@@ -484,7 +484,7 @@
   // ── RECIPES ─────────────────────────────────────────────────────────
   const RECIPES = [
     {
-      name: 'Hoffmann',
+      name: 'Ultimate',
       author: 'James Hoffmann',
       doses: [
         { name: '1 cup',   coffee: 15, water: 250 },
@@ -835,6 +835,7 @@
   function setGrind(idx) {
     currentGrind = idx;
     document.querySelectorAll('.grind-pill').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+    try { localStorage.setItem('v60-grind', idx); } catch (e) {}
   }
 
   // ── DYNAMIC RECIPE ──────────────────────────────────────────────────
@@ -1063,6 +1064,8 @@
   // ── INIT ────────────────────────────────────────────────────────────
   buildRecipePicker();
   setRecipe(0);
+  const savedGrind = parseInt(localStorage.getItem('v60-grind') ?? '1');
+  setGrind(isNaN(savedGrind) ? 1 : savedGrind);
   loadHistory();
 </script>
 </body>
