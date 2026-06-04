@@ -88,7 +88,7 @@
     }
 
     /* ── RECIPE PICKER ── */
-    .recipe-picker { width: 100%; display: flex; gap: 6px; }
+    .recipe-picker { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .recipe-pill {
       flex: 1; background: var(--surface); border: 1px solid var(--border);
       border-radius: 10px; padding: 8px 6px; color: var(--text-muted);
@@ -547,6 +547,36 @@
           { type: 'pour', tag: 'Pour 5',   duration: 30, weight: `→ ${water}g`,
             instruction: `Final pour — reach ${water}g total. Let this last pour define the strength.` },
           { type: 'wait', tag: 'Drawdown', duration: 90, weight: null,
+            instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
+        ];
+      },
+    },
+    {
+      name: 'April',
+      author: 'Patrik Rolf',
+      doses: [
+        { name: '1 cup',   coffee: 15, water: 250 },
+        { name: '1½ cups', coffee: 20, water: 335 },
+        { name: '2 cups',  coffee: 30, water: 500 },
+      ],
+      targetRange: [165, 195],
+      thresholds: [135, 165, 195, 235],
+      getSteps(coffee, water) {
+        const bloom = Math.round(water * 0.18);
+        const mid1  = Math.round(water * 0.60);
+        const mid2  = Math.round(water * 0.80);
+        return [
+          { type: 'pour', tag: 'Bloom',       duration: 15, weight: `→ ${bloom}g`,
+            instruction: `Pour ${bloom}g in a gentle spiral to wet all grounds evenly.` },
+          { type: 'wait', tag: 'Bloom wait',  duration: 30, weight: null,
+            instruction: 'Wait for the bloom to settle. Aim for ~45 seconds total from the start.' },
+          { type: 'pour', tag: 'Second pour', duration: 30, weight: `→ ${mid1}g`,
+            instruction: `Pour steadily to ${mid1}g, spiralling from centre outward.` },
+          { type: 'pour', tag: 'Third pour',  duration: 20, weight: `→ ${mid2}g`,
+            instruction: `Continue to ${mid2}g in a slow, even stream.` },
+          { type: 'pour', tag: 'Final pour',  duration: 20, weight: `→ ${water}g`,
+            instruction: `Finish at ${water}g. Keep the pour gentle and controlled.` },
+          { type: 'wait', tag: 'Drawdown',    duration: 75, weight: null,
             instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
         ];
       },
