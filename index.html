@@ -499,11 +499,11 @@
         const bloom = Math.round(50  * scale);
         const mid   = Math.round(150 * scale);
         return [
-          { type: 'pour',  tag: 'Bloom',      duration: 12, weight: `→ ${bloom}g`,
+          { type: 'pour',  tag: 'Bloom',      duration: 10, weight: `→ ${bloom}g`,
             instruction: `Pour ${bloom}g in slow spirals from the center outward. Wet every ground.` },
           { type: 'swirl', tag: 'Swirl',      duration: 8,  weight: null,
             instruction: 'Gently swirl the V60 so all grounds are evenly saturated. A few slow rotations.' },
-          { type: 'wait',  tag: 'Bloom wait', duration: 25, weight: null,
+          { type: 'wait',  tag: 'Bloom wait', duration: 27, weight: null,
             instruction: 'Wait. Watch the coffee dome de-gas. Total bloom time ~45 seconds from the start.' },
           { type: 'pour',  tag: 'First pour', duration: 30, weight: `→ ${mid}g`,
             instruction: `Pour slowly in circles from center outward. Take ~30 seconds to reach ${mid}g.` },
@@ -529,7 +529,7 @@
       getSteps(coffee, water) {
         const p = Math.round(water / 5);
         return [
-          { type: 'pour', tag: 'Pour 1',   duration: 15, weight: `→ ${p}g`,
+          { type: 'pour', tag: 'Pour 1',   duration: 10, weight: `→ ${p}g`,
             instruction: `Pour ${p}g (20%) evenly over all grounds. This sets sweetness and body.` },
           { type: 'wait', tag: 'Wait',      duration: 40, weight: null,
             instruction: 'Wait for water to drain almost completely. Skip early if the bed is nearly dry.' },
@@ -567,9 +567,9 @@
         const mid1  = Math.round(water * 0.60);
         const mid2  = Math.round(water * 0.80);
         return [
-          { type: 'pour', tag: 'Bloom',       duration: 15, weight: `→ ${bloom}g`,
+          { type: 'pour', tag: 'Bloom',       duration: 10, weight: `→ ${bloom}g`,
             instruction: `Pour ${bloom}g in a gentle spiral to wet all grounds evenly.` },
-          { type: 'wait', tag: 'Bloom wait',  duration: 30, weight: null,
+          { type: 'wait', tag: 'Bloom wait',  duration: 35, weight: null,
             instruction: 'Wait for the bloom to settle. Aim for ~45 seconds total from the start.' },
           { type: 'pour', tag: 'Second pour', duration: 30, weight: `→ ${mid1}g`,
             instruction: `Pour steadily to ${mid1}g, spiralling from centre outward.` },
@@ -596,10 +596,10 @@
         const bloom = Math.round(water * 0.2);
         const rest  = water - bloom;
         return [
-          { type: 'pour', tag: 'Bloom',      duration: 15, weight: `→ ${bloom}g`,
+          { type: 'pour', tag: 'Bloom',      duration: 10, weight: `→ ${bloom}g`,
             instruction: `Pour ${bloom}g to saturate all grounds. Start at center and spiral outward.` },
-          { type: 'wait', tag: 'Bloom wait', duration: 30, weight: null,
-            instruction: "Let the bloom de-gas for 30 seconds. Watch the dome rise and settle." },
+          { type: 'wait', tag: 'Bloom wait', duration: 35, weight: null,
+            instruction: "Let the bloom de-gas. Watch the dome rise and settle." },
           { type: 'pour', tag: 'Main pour',  duration: 45, weight: `→ ${water}g`,
             instruction: `Pour the remaining ${rest}g in a slow, steady spiral. Take the full 60 seconds.` },
           { type: 'wait', tag: 'Drawdown',   duration: 75, weight: null,
