@@ -87,6 +87,22 @@
       font-weight: 300; margin-top: 4px;
     }
 
+    /* ── RECIPE PICKER ── */
+    .recipe-picker { width: 100%; display: flex; gap: 6px; }
+    .recipe-pill {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 6px; color: var(--text-muted);
+      cursor: pointer; text-align: center; line-height: 1.3;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .recipe-pill .rp-name  { font-size: 0.78rem; }
+    .recipe-pill .rp-author { font-size: 0.58rem; color: var(--text-dim); margin-top: 2px; }
+    .recipe-pill.active {
+      background: var(--surface2); border-color: var(--pour); color: var(--text);
+    }
+    .recipe-pill.active .rp-author { color: var(--pour); }
+
     /* ── DOSE SELECTOR ── */
     .dose-selector { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
     .dose-btn {
@@ -338,23 +354,12 @@
 <div class="screen active" id="screen-intro">
   <div class="intro-header">
     <div class="intro-title">V60 Pour Along</div>
-    <div class="intro-sub">James Hoffmann technique</div>
+    <div class="intro-sub" id="intro-sub"></div>
   </div>
 
-  <div class="dose-selector">
-    <button class="dose-btn active" onclick="setDose(0)">
-      <div class="dose-name">1 cup</div>
-      <div class="dose-ratio">15g / 250g</div>
-    </button>
-    <button class="dose-btn" onclick="setDose(1)">
-      <div class="dose-name">1½ cups</div>
-      <div class="dose-ratio">22g / 370g</div>
-    </button>
-    <button class="dose-btn" onclick="setDose(2)">
-      <div class="dose-name">2 cups</div>
-      <div class="dose-ratio">30g / 500g</div>
-    </button>
-  </div>
+  <div class="recipe-picker" id="recipe-picker"></div>
+
+  <div class="dose-selector" id="dose-selector"></div>
 
   <div class="recipe-card">
     <div class="rc-amounts">
@@ -394,7 +399,7 @@
     <div class="rc-link"><div class="rc-link-line"></div></div>
     <div class="rc-row">
       <span class="rc-label">Target time</span>
-      <span class="rc-value">3:00 <span class="rc-muted">– 3:30</span></span>
+      <span class="rc-value" id="rc-target"></span>
     </div>
   </div>
 
@@ -476,46 +481,114 @@
 </div>
 
 <script>
-  // ── CONSTANTS ───────────────────────────────────────────────────────
-  const DOSES = [
-    { coffee: 15, water: 250 },
-    { coffee: 22, water: 370 },
-    { coffee: 30, water: 500 },
+  // ── RECIPES ─────────────────────────────────────────────────────────
+  const RECIPES = [
+    {
+      name: 'Hoffmann',
+      author: 'James Hoffmann',
+      doses: [
+        { name: '1 cup',   coffee: 15, water: 250 },
+        { name: '1½ cups', coffee: 22, water: 370 },
+        { name: '2 cups',  coffee: 30, water: 500 },
+      ],
+      targetRange: [180, 210],
+      thresholds: [150, 180, 210, 250],
+      getSteps(coffee, water) {
+        const scale = water / 250;
+        const bloom = Math.round(50  * scale);
+        const mid   = Math.round(150 * scale);
+        return [
+          { type: 'pour',  tag: 'Bloom',      duration: 12, weight: `→ ${bloom}g`,
+            instruction: `Pour ${bloom}g in slow spirals from the center outward. Wet every ground.` },
+          { type: 'swirl', tag: 'Swirl',      duration: 8,  weight: null,
+            instruction: 'Gently swirl the V60 so all grounds are evenly saturated. A few slow rotations.' },
+          { type: 'wait',  tag: 'Bloom wait', duration: 25, weight: null,
+            instruction: 'Wait. Watch the coffee dome de-gas. Total bloom time ~45 seconds from the start.' },
+          { type: 'pour',  tag: 'First pour', duration: 30, weight: `→ ${mid}g`,
+            instruction: `Pour slowly in circles from center outward. Take ~30 seconds to reach ${mid}g.` },
+          { type: 'pour',  tag: 'Final pour', duration: 30, weight: `→ ${water}g`,
+            instruction: `Continue pouring in slow circles to reach ${water}g. Steady and even.` },
+          { type: 'swirl', tag: 'Swirl',      duration: 8,  weight: null,
+            instruction: 'Give the V60 a gentle swirl to level the bed before drawdown.' },
+          { type: 'wait',  tag: 'Drawdown',   duration: 90, weight: null,
+            instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
+        ];
+      },
+    },
+    {
+      name: '4:6 Method',
+      author: 'Tetsu Kasuya',
+      doses: [
+        { name: '1 cup',   coffee: 15, water: 225 },
+        { name: '1½ cups', coffee: 20, water: 300 },
+        { name: '2 cups',  coffee: 30, water: 450 },
+      ],
+      targetRange: [210, 270],
+      thresholds: [180, 210, 270, 330],
+      getSteps(coffee, water) {
+        const p = Math.round(water / 5);
+        return [
+          { type: 'pour', tag: 'Pour 1',   duration: 30, weight: `→ ${p}g`,
+            instruction: `Pour ${p}g (20%) evenly over all grounds. This sets sweetness and body.` },
+          { type: 'wait', tag: 'Wait',      duration: 35, weight: null,
+            instruction: 'Wait for water to drain almost completely. Skip early if the bed is nearly dry.' },
+          { type: 'pour', tag: 'Pour 2',   duration: 30, weight: `→ ${p * 2}g`,
+            instruction: `Pour another ${p}g to reach ${p * 2}g. Completes the flavor control phase.` },
+          { type: 'wait', tag: 'Wait',      duration: 35, weight: null,
+            instruction: 'Wait for water to drain almost completely. Skip early if the bed is nearly dry.' },
+          { type: 'pour', tag: 'Pour 3',   duration: 30, weight: `→ ${p * 3}g`,
+            instruction: `Pour ${p}g to reach ${p * 3}g. Strength phase begins — keep pours consistent.` },
+          { type: 'wait', tag: 'Wait',      duration: 35, weight: null,
+            instruction: 'Wait for water to drain almost completely. Skip early if the bed is nearly dry.' },
+          { type: 'pour', tag: 'Pour 4',   duration: 30, weight: `→ ${p * 4}g`,
+            instruction: `Pour ${p}g to reach ${p * 4}g. Steady pace throughout.` },
+          { type: 'wait', tag: 'Wait',      duration: 35, weight: null,
+            instruction: 'Wait for water to drain almost completely. Skip early if the bed is nearly dry.' },
+          { type: 'pour', tag: 'Pour 5',   duration: 30, weight: `→ ${water}g`,
+            instruction: `Final pour — reach ${water}g total. Let this last pour define the strength.` },
+          { type: 'wait', tag: 'Drawdown', duration: 90, weight: null,
+            instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
+        ];
+      },
+    },
+    {
+      name: 'Classic',
+      author: 'Scott Rao',
+      doses: [
+        { name: '1 cup',   coffee: 15, water: 250 },
+        { name: '1½ cups', coffee: 20, water: 335 },
+        { name: '2 cups',  coffee: 30, water: 500 },
+      ],
+      targetRange: [150, 180],
+      thresholds: [120, 150, 180, 220],
+      getSteps(coffee, water) {
+        const bloom = Math.round(water * 0.2);
+        const rest  = water - bloom;
+        return [
+          { type: 'pour', tag: 'Bloom',      duration: 15, weight: `→ ${bloom}g`,
+            instruction: `Pour ${bloom}g to saturate all grounds. Start at center and spiral outward.` },
+          { type: 'wait', tag: 'Bloom wait', duration: 30, weight: null,
+            instruction: "Let the bloom de-gas for 30 seconds. Watch the dome rise and settle." },
+          { type: 'pour', tag: 'Main pour',  duration: 60, weight: `→ ${water}g`,
+            instruction: `Pour the remaining ${rest}g in a slow, steady spiral. Take the full 60 seconds.` },
+          { type: 'wait', tag: 'Drawdown',   duration: 75, weight: null,
+            instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
+        ];
+      },
+    },
   ];
+
   const CIRCUMFERENCE = 2 * Math.PI * 144; // matches r=144
 
-  // ── DYNAMIC RECIPE ──────────────────────────────────────────────────
-  let currentDose  = 0;
-  let customCoffee = 15;
-  let customWater  = 250;
-  let currentRatio = 250 / 15;
-  let currentGrind = 1;
-  let STEPS = [];
-
-  function getSteps() {
-    const scale = customWater / 250;
-    const bloom = Math.round(50  * scale);
-    const mid   = Math.round(150 * scale);
-    const total = customWater;
-    return [
-      { type: 'pour',  tag: 'Bloom',       duration: 12, weight: `→ ${bloom}g`,
-        instruction: `Pour ${bloom}g of water in slow spirals from the center outward. Wet every ground.` },
-      { type: 'swirl', tag: 'Swirl',       duration: 8,  weight: null,
-        instruction: 'Gently swirl the V60 so all grounds are evenly saturated. A few slow rotations.' },
-      { type: 'wait',  tag: 'Bloom wait',  duration: 25, weight: null,
-        instruction: 'Wait. Watch the coffee dome and de-gas. Total bloom time ~45 seconds from the start.' },
-      { type: 'pour',  tag: 'First pour',  duration: 30, weight: `→ ${mid}g`,
-        instruction: `Pour slowly in circles from center outward. Take ~30 seconds to reach ${mid}g.` },
-      { type: 'pour',  tag: 'Final pour',  duration: 30, weight: `→ ${total}g`,
-        instruction: `Continue pouring in slow circles to reach ${total}g. Steady and even.` },
-      { type: 'swirl', tag: 'Swirl',       duration: 8,  weight: null,
-        instruction: 'Give the V60 a gentle swirl to level the bed before drawdown.' },
-      { type: 'wait',  tag: 'Drawdown',    duration: 90, weight: null,
-        instruction: 'Let the coffee drain fully. The bed should be flat when done. Tap Finish when dry.' },
-    ];
-  }
-
   // ── STATE ───────────────────────────────────────────────────────────
+  let currentRecipe    = 0;
+  let currentDose      = 0;
+  let customCoffee     = 15;
+  let customWater      = 250;
+  let currentRatio     = 250 / 15;
+  let currentGrind     = 1;
+  let STEPS            = [];
+
   let startTime        = null;
   let rafId            = null;
   let currentStepIdx   = 0;
@@ -556,11 +629,12 @@
   }
 
   function verdictInfo(secs) {
-    if (secs < 150) return { text: 'Very fast — way under target', cls: 'bad',  short: 'very fast' };
-    if (secs < 180) return { text: 'A touch fast — try slightly finer', cls: 'warn', short: 'a touch fast' };
-    if (secs <= 210) return { text: 'Right in the zone', cls: 'good', short: 'in the zone' };
-    if (secs <= 250) return { text: 'A touch slow — try slightly coarser', cls: 'warn', short: 'a touch slow' };
-    return { text: 'Very slow — try a coarser grind', cls: 'bad', short: 'very slow' };
+    const [t1, t2, t3, t4] = RECIPES[currentRecipe].thresholds;
+    if (secs < t1)  return { text: 'Very fast — way under target',         cls: 'bad',  short: 'very fast',    tip: 'bad_fast' };
+    if (secs < t2)  return { text: 'A touch fast — try slightly finer',    cls: 'warn', short: 'a touch fast', tip: 'warn_fast' };
+    if (secs <= t3) return { text: 'Right in the zone',                    cls: 'good', short: 'in the zone',  tip: 'good' };
+    if (secs <= t4) return { text: 'A touch slow — try slightly coarser',  cls: 'warn', short: 'a touch slow', tip: 'warn_slow' };
+    return            { text: 'Very slow — try a coarser grind',           cls: 'bad',  short: 'very slow',    tip: 'bad_slow' };
   }
 
   // ── AUDIO ───────────────────────────────────────────────────────────
@@ -642,18 +716,55 @@
       const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
       if (history.length > 0) {
         const last = history[0];
-        document.getElementById('lb-time').textContent = fmtTime(last.totalSecs);
+        document.getElementById('lb-time').textContent    = fmtTime(last.totalSecs);
         document.getElementById('lb-verdict').textContent = last.short;
         document.getElementById('last-brew').style.display = 'flex';
       }
     } catch (e) {}
   }
 
+  // ── RECIPE PICKER ───────────────────────────────────────────────────
+  function buildRecipePicker() {
+    const container = document.getElementById('recipe-picker');
+    RECIPES.forEach((r, i) => {
+      const pill = document.createElement('button');
+      pill.className = 'recipe-pill' + (i === 0 ? ' active' : '');
+      pill.innerHTML = `<div class="rp-name">${r.name}</div><div class="rp-author">${r.author}</div>`;
+      pill.onclick = () => setRecipe(i);
+      container.appendChild(pill);
+    });
+  }
+
+  function setRecipe(idx) {
+    currentRecipe = idx;
+    document.querySelectorAll('.recipe-pill').forEach((p, i) => p.classList.toggle('active', i === idx));
+    document.getElementById('intro-sub').textContent = RECIPES[idx].author;
+    const [tMin, tMax] = RECIPES[idx].targetRange;
+    document.getElementById('rc-target').innerHTML =
+      `${fmtTime(tMin)} <span class="rc-muted">– ${fmtTime(tMax)}</span>`;
+    buildDoseButtons();
+    setDose(0);
+  }
+
   // ── DOSE SELECTOR ───────────────────────────────────────────────────
+  function buildDoseButtons() {
+    const container = document.getElementById('dose-selector');
+    const doses = RECIPES[currentRecipe].doses;
+    container.innerHTML = '';
+    doses.forEach((d, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'dose-btn' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `<div class="dose-name">${d.name}</div><div class="dose-ratio">${d.coffee}g / ${d.water}g</div>`;
+      btn.onclick = () => setDose(i);
+      container.appendChild(btn);
+    });
+  }
+
   function setDose(idx) {
     currentDose  = idx;
+    const doses  = RECIPES[currentRecipe].doses;
     document.querySelectorAll('.dose-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
-    const dose   = DOSES[idx];
+    const dose   = doses[idx];
     customCoffee = dose.coffee;
     customWater  = dose.water;
     currentRatio = dose.water / dose.coffee;
@@ -684,6 +795,11 @@
   function setGrind(idx) {
     currentGrind = idx;
     document.querySelectorAll('.grind-pill').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+  }
+
+  // ── DYNAMIC RECIPE ──────────────────────────────────────────────────
+  function getSteps() {
+    return RECIPES[currentRecipe].getSteps(customCoffee, customWater);
   }
 
   // ── TRACK ───────────────────────────────────────────────────────────
@@ -752,7 +868,7 @@
     brewTimer.textContent = isLast ? fmtTime(stepElapsed) : fmtTime(Math.max(0, s.duration - stepElapsed));
     brewTotal.textContent = fmtTime(elapsed) + ' total';
 
-    // last step: ring fills at target, then stays green
+    // last step: ring turns green once target duration is hit
     if (isLast && stepElapsed >= s.duration) {
       ringProgress.style.stroke = 'var(--done)';
     }
@@ -812,20 +928,19 @@
     vibe([100, 60, 100, 60, 200]);
 
     const v = verdictInfo(totalSecs);
-    document.getElementById('recap-time').textContent   = fmtTime(totalSecs);
+    document.getElementById('recap-time').textContent = fmtTime(totalSecs);
     const vEl = document.getElementById('recap-verdict');
     vEl.textContent = v.text;
     vEl.className   = `recap-verdict ${v.cls}`;
 
     const tips = {
-      bad_fast: '<strong>Try a finer grind.</strong> Water moved through too quickly. Go noticeably finer and aim for 3:00–3:30.',
-      warn_fast: '<strong>Small adjustment needed.</strong> Dial your grind slightly finer to slow the drawdown into the 3:00–3:30 window.',
-      good: '<strong>Perfect drawdown.</strong> Keep that grind setting. If flavour feels weak, try hotter water or slightly finer. If bitter, try cooler or coarser.',
-      warn_slow: '<strong>Small adjustment needed.</strong> Dial your grind slightly coarser to speed the drawdown into the 3:00–3:30 window.',
-      bad_slow: '<strong>Try a coarser grind.</strong> Water is struggling to drain. Go noticeably coarser and aim for 3:00–3:30.',
+      bad_fast:  '<strong>Try a finer grind.</strong> Water moved through too quickly — go noticeably finer and re-dial to hit the target window.',
+      warn_fast: '<strong>Small adjustment needed.</strong> Dial your grind slightly finer to slow the drawdown into the target window.',
+      good:      '<strong>Perfect drawdown.</strong> Keep that grind setting. If flavour feels weak, try hotter water or slightly finer. If bitter, try cooler or coarser.',
+      warn_slow: '<strong>Small adjustment needed.</strong> Dial your grind slightly coarser to speed the drawdown into the target window.',
+      bad_slow:  '<strong>Try a coarser grind.</strong> Water is struggling to drain — go noticeably coarser and re-dial to hit the target window.',
     };
-    const tipKey = totalSecs < 150 ? 'bad_fast' : totalSecs < 180 ? 'warn_fast' : totalSecs <= 210 ? 'good' : totalSecs <= 250 ? 'warn_slow' : 'bad_slow';
-    document.getElementById('recap-tip').innerHTML = tips[tipKey];
+    document.getElementById('recap-tip').innerHTML = tips[v.tip];
 
     const actualDurations = STEPS.map((_, i) => {
       const start = stepEntryElapsed[i] ?? 0;
@@ -833,10 +948,10 @@
       return end - start;
     });
 
-    const STEP_TARGETS = [12, 8, 25, 30, 30, 8, null];
     const rowsEl = document.getElementById('recap-rows');
     rowsEl.innerHTML = '';
     STEPS.forEach((s, i) => {
+      const isLastStep = i === STEPS.length - 1;
       const row    = document.createElement('div');
       row.className = 'recap-row';
       const dot    = document.createElement('div');
@@ -849,7 +964,7 @@
       actual.textContent = fmtTime(actualDurations[i]);
       const tgt  = document.createElement('div');
       tgt.className = 'recap-row-target';
-      tgt.textContent = STEP_TARGETS[i] ? `/ ~${fmtTime(STEP_TARGETS[i])}` : '';
+      tgt.textContent = isLastStep ? '' : `/ ~${fmtTime(s.duration)}`;
       row.append(dot, name, actual, tgt);
       rowsEl.appendChild(row);
     });
@@ -906,7 +1021,8 @@
   }
 
   // ── INIT ────────────────────────────────────────────────────────────
-  setDose(0);
+  buildRecipePicker();
+  setRecipe(0);
   loadHistory();
 </script>
 </body>
