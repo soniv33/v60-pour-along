@@ -408,6 +408,7 @@
     <div class="lb-right">
       <span class="lb-time" id="lb-time"></span>
       <span class="lb-verdict" id="lb-verdict"></span>
+      <span class="lb-verdict" id="lb-grind"></span>
     </div>
   </div>
 
@@ -748,7 +749,7 @@
   function saveHistory(totalSecs) {
     try {
       const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
-      history.unshift({ totalSecs, short: verdictInfo(totalSecs).short, date: Date.now() });
+      history.unshift({ totalSecs, short: verdictInfo(totalSecs).short, grind: currentGrind, date: Date.now() });
       localStorage.setItem('v60-history', JSON.stringify(history.slice(0, 10)));
     } catch (e) {}
   }
@@ -758,8 +759,10 @@
       const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
       if (history.length > 0) {
         const last = history[0];
+        const grindNames = ['Fine', 'Med-Fine', 'Medium', 'Coarse'];
         document.getElementById('lb-time').textContent    = fmtTime(last.totalSecs);
         document.getElementById('lb-verdict').textContent = last.short;
+        document.getElementById('lb-grind').textContent   = grindNames[last.grind] ?? '';
         document.getElementById('last-brew').style.display = 'flex';
       }
     } catch (e) {}
