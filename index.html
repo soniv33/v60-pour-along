@@ -658,8 +658,20 @@
     return (Date.now() - startTime - pausedTotalMs - activePause) / 1000;
   }
 
+  function doseScale() {
+    return customWater / RECIPES[currentRecipe].doses[0].water;
+  }
+
+  function updateTargetDisplay() {
+    const scale = doseScale();
+    const [tMin, tMax] = RECIPES[currentRecipe].targetRange.map(t => Math.round(t * scale));
+    document.getElementById('rc-target').innerHTML =
+      `${fmtTime(tMin)} <span class="rc-muted">– ${fmtTime(tMax)}</span>`;
+  }
+
   function verdictInfo(secs) {
-    const [t1, t2, t3, t4] = RECIPES[currentRecipe].thresholds;
+    const scale = doseScale();
+    const [t1, t2, t3, t4] = RECIPES[currentRecipe].thresholds.map(t => Math.round(t * scale));
     if (secs < t1)  return { text: 'Very fast — way under target',         cls: 'bad',  short: 'very fast',    tip: 'bad_fast' };
     if (secs < t2)  return { text: 'A touch fast — try slightly finer',    cls: 'warn', short: 'a touch fast', tip: 'warn_fast' };
     if (secs <= t3) return { text: 'Right in the zone',                    cls: 'good', short: 'in the zone',  tip: 'good' };
@@ -769,9 +781,6 @@
     currentRecipe = idx;
     document.querySelectorAll('.recipe-pill').forEach((p, i) => p.classList.toggle('active', i === idx));
     document.getElementById('intro-sub').textContent = RECIPES[idx].author;
-    const [tMin, tMax] = RECIPES[idx].targetRange;
-    document.getElementById('rc-target').innerHTML =
-      `${fmtTime(tMin)} <span class="rc-muted">– ${fmtTime(tMax)}</span>`;
     buildDoseButtons();
     setDose(0);
   }
@@ -804,6 +813,7 @@
   function updateRecipeDisplay() {
     document.getElementById('rc-coffee').textContent = customCoffee;
     document.getElementById('rc-water').textContent  = customWater;
+    updateTargetDisplay();
   }
 
   function adjustCoffee(delta) {
