@@ -496,8 +496,8 @@
       thresholds: [150, 180, 210, 250],
       getSteps(coffee, water) {
         const scale = water / 250;
-        const bloom = Math.round(50  * scale);
-        const mid   = Math.round(150 * scale);
+        const bloom = Math.round(50 * scale);
+        const p     = bloom; // each post-bloom pour is the same as the bloom weight (~50g for 1 cup)
         return [
           { type: 'pour',  tag: 'Bloom',      duration: 10, weight: `→ ${bloom}g`,
             instruction: `Pour ${bloom}g in slow spirals from the center outward. Wet every ground.` },
@@ -505,10 +505,14 @@
             instruction: 'Gently swirl the V60 so all grounds are evenly saturated. A few slow rotations.' },
           { type: 'wait',  tag: 'Bloom wait', duration: 27, weight: null,
             instruction: 'Wait. Watch the coffee dome de-gas. Total bloom time ~45 seconds from the start.' },
-          { type: 'pour',  tag: 'First pour', duration: 30, weight: `→ ${mid}g`,
-            instruction: `Pour slowly in circles from center outward. Take ~30 seconds to reach ${mid}g.` },
-          { type: 'pour',  tag: 'Final pour', duration: 30, weight: `→ ${water}g`,
-            instruction: `Continue pouring in slow circles to reach ${water}g. Steady and even.` },
+          { type: 'pour',  tag: 'Pour 2',     duration: 15, weight: `→ ${bloom + p}g`,
+            instruction: `Pour ${p}g in slow circles from center outward.` },
+          { type: 'pour',  tag: 'Pour 3',     duration: 15, weight: `→ ${bloom + p * 2}g`,
+            instruction: `Pour ${p}g in slow circles from center outward.` },
+          { type: 'pour',  tag: 'Pour 4',     duration: 15, weight: `→ ${bloom + p * 3}g`,
+            instruction: `Pour ${p}g in slow circles from center outward.` },
+          { type: 'pour',  tag: 'Pour 5',     duration: 15, weight: `→ ${water}g`,
+            instruction: `Final pour to ${water}g. Slow and steady.` },
           { type: 'swirl', tag: 'Swirl',      duration: 8,  weight: null,
             instruction: 'Give the V60 a gentle swirl to level the bed before drawdown.' },
           { type: 'wait',  tag: 'Drawdown',   duration: 90, weight: null,
