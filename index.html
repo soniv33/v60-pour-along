@@ -777,7 +777,7 @@
   function saveHistory(totalSecs) {
     try {
       const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
-      history.unshift({ totalSecs, short: verdictInfo(totalSecs).short, grind: currentGrind, date: Date.now() });
+      history.unshift({ totalSecs, short: verdictInfo(totalSecs).short, grind: currentGrind, recipe: currentRecipe, date: Date.now() });
       localStorage.setItem('v60-history', JSON.stringify(history.slice(0, 10)));
     } catch (e) {}
   }
@@ -785,13 +785,15 @@
   function loadHistory() {
     try {
       const history = JSON.parse(localStorage.getItem('v60-history') || '[]');
-      if (history.length > 0) {
-        const last = history[0];
+      const last = history.find(h => h.recipe === currentRecipe);
+      if (last) {
         const grindNames = ['Fine', 'Med-Fine', 'Medium', 'Coarse'];
         document.getElementById('lb-time').textContent    = fmtTime(last.totalSecs);
         document.getElementById('lb-verdict').textContent = last.short;
         document.getElementById('lb-grind').textContent   = grindNames[last.grind] ?? '';
         document.getElementById('last-brew').style.display = 'flex';
+      } else {
+        document.getElementById('last-brew').style.display = 'none';
       }
     } catch (e) {}
   }
@@ -814,6 +816,7 @@
     document.getElementById('intro-sub').textContent = RECIPES[idx].author;
     buildDoseButtons();
     setDose(0);
+    loadHistory();
   }
 
   // ── DOSE SELECTOR ───────────────────────────────────────────────────
@@ -1097,7 +1100,6 @@
   setRecipe(0);
   const savedGrind = parseInt(localStorage.getItem('v60-grind') ?? '1');
   setGrind(isNaN(savedGrind) ? 1 : savedGrind);
-  loadHistory();
 </script>
 </body>
 </html>
